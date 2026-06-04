@@ -374,3 +374,7 @@ $RECYCLE.BIN/
 # Wails build output
 /ffxiv-config-backup
 /build/bin/
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/
