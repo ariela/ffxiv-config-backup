@@ -1,8 +1,14 @@
 // frontend/src/store/useAppStore.ts
 import { create } from 'zustand'
+import {
+  GetLocalConfig as goGetLocalConfig,
+  GetCharacters as goGetCharacters,
+  GetBackupList as goGetBackupList,
+  CreateBackup as goCreateBackup,
+  RestoreBackup as goRestoreBackup,
+  CheckGameProcess as goCheckGameProcess,
+} from '../../wailsjs/go/main/App'
 
-// Wails バインディング未生成のため、型をインライン定義
-// wails dev 実行後に wailsjs/models.ts の型と統合する
 export type BackupMeta = {
   backup_id: string
   created_at: string
@@ -24,28 +30,6 @@ export type LocalConfig = {
   backup_target_directory: string
 }
 
-// Go 関数のプレースホルダー（wails dev 後に wailsjs/go/main/App から import する）
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const wailsCall = async <T>(fn: () => Promise<T>): Promise<T> => fn()
-
-// バインディングが生成されるまでの仮実装
-const goGetLocalConfig = (): Promise<LocalConfig> =>
-  Promise.resolve({ backup_target_directory: '' })
-const goGetCharacters = (): Promise<Character[]> => Promise.resolve([])
-const goGetBackupList = (_charID: string): Promise<BackupMeta[]> => Promise.resolve([])
-const goCreateBackup = (
-  _name: string,
-  _memo: string,
-  _charIDs: string[],
-  _includeCommon: boolean
-): Promise<void> => Promise.resolve()
-const goRestoreBackup = (
-  _backupID: string,
-  _charID: string,
-  _files: string[],
-  _includeCommon: boolean
-): Promise<void> => Promise.resolve()
-const goCheckGameProcess = (): Promise<boolean> => Promise.resolve(false)
 
 interface AppState {
   nasPath: string
@@ -84,10 +68,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
 
   initApp: async () => {
     try {
-      const cfg = await wailsCall(goGetLocalConfig)
+      const cfg = await goGetLocalConfig()
       set({ nasPath: cfg.backup_target_directory ?? '' })
       if (cfg.backup_target_directory) {
-        const chars = await wailsCall(goGetCharacters)
+        const chars = await goGetCharacters()
         set({ characters: chars })
       }
     } catch (e: unknown) {
@@ -98,7 +82,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   selectCharacter: async (id: string) => {
     set({ selectedCharId: id, selectedBackupId: null, selectedFiles: new Set(), backups: [] })
     try {
-      const backups = await wailsCall(() => goGetBackupList(id))
+      const backups = await goGetBackupList(id)
       set({ backups })
     } catch (e: unknown) {
       set({ error: String(e) })
@@ -132,10 +116,10 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
   createBackup: async (name, memo, charIDs, includeCommon) => {
     set({ isLoading: true, error: null })
     try {
-      await wailsCall(() => goCreateBackup(name, memo, charIDs, includeCommon))
+      await goCreateBackup(name, memo, charIDs, includeCommon)
       const { selectedCharId } = get()
       if (selectedCharId) {
-        const backups = await wailsCall(() => goGetBackupList(selectedCharId))
+        const backups = await goGetBackupList(selectedCharId)
         set({ backups })
       }
     } catch (e: unknown) {
@@ -150,9 +134,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     if (!selectedBackupId) return
     set({ isLoading: true, error: null })
     try {
-      await wailsCall(() =>
-        goRestoreBackup(selectedBackupId, charID, Array.from(selectedFiles), includeCommon)
-      )
+      await goRestoreBackup(selectedBackupId, charID, Array.from(selectedFiles), includeCommon)
     } catch (e: unknown) {
       set({ error: String(e) })
     } finally {
@@ -162,7 +144,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
 
   checkGameProcess: async () => {
     try {
-      const running = await wailsCall(goCheckGameProcess)
+      const running = await goCheckGameProcess()
       set({ isGameRunning: running })
     } catch {
       set({ isGameRunning: false })

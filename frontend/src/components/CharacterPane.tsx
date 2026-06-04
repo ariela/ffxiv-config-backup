@@ -1,20 +1,10 @@
 // frontend/src/components/CharacterPane.tsx
 import { useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { UpdateCharacterMapping } from '../../wailsjs/go/main/App'
 
 interface Props {
   onCreateBackup: () => void
-}
-
-// Wails バインディングプレースホルダー
-const UpdateCharacterMapping = async (_id: string, _name: string): Promise<void> => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod = await import('../../wailsjs/go/main/App' as any)
-    return mod.UpdateCharacterMapping(_id, _name)
-  } catch {
-    throw new Error('バインディングが初期化されていません')
-  }
 }
 
 export function CharacterPane({ onCreateBackup }: Props) {

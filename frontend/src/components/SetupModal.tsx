@@ -1,30 +1,10 @@
 // frontend/src/components/SetupModal.tsx
 import { useState, useEffect } from 'react'
 import { useAppStore } from '../store/useAppStore'
+import { DetectGamePath, SetBackupDirectory } from '../../wailsjs/go/main/App'
 
 interface Props {
   onComplete: () => void
-}
-
-// Wails バインディングのプレースホルダー（wails dev 後に実際の import に差し替え）
-const DetectGamePath = async (): Promise<string> => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod = await import('../../wailsjs/go/main/App' as any)
-    return mod.DetectGamePath()
-  } catch {
-    return ''
-  }
-}
-
-const SetBackupDirectory = async (nas: string, game: string): Promise<void> => {
-  try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mod = await import('../../wailsjs/go/main/App' as any)
-    return mod.SetBackupDirectory(nas, game)
-  } catch {
-    throw new Error('バインディングが初期化されていません')
-  }
 }
 
 export function SetupModal({ onComplete }: Props) {
