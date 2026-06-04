@@ -73,6 +73,29 @@ func (s *Service) CreateBackup(name, memo string, charIDs []string, includeCommo
 	return os.WriteFile(filepath.Join(dstDir, "meta.json"), data, 0644)
 }
 
+func (s *Service) RestoreBackup(backupID, charID string, files []string, includeCommon bool) error {
+	backupDir := filepath.Join(s.backupsDir, backupID)
+	if _, err := os.Stat(backupDir); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("バックアップ '%s' が見つかりません", backupID)
+	}
+
+	snap := NewSnapshot(backupDir, s.gameDir)
+
+	if charID != "ACCOUNT" && len(files) > 0 {
+		if _, err := snap.CopyCharacter(charID, files); err != nil {
+			return err
+		}
+	}
+
+	if includeCommon {
+		if _, err := snap.CopyCommon(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (s *Service) GetBackupList(charID string) ([]BackupMeta, error) {
 	entries, err := os.ReadDir(s.backupsDir)
 	if errors.Is(err, os.ErrNotExist) {

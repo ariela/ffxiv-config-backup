@@ -109,6 +109,40 @@ func TestGetBackupList_ByCharID(t *testing.T) {
 	}
 }
 
+func TestRestoreBackup_RestoresFiles(t *testing.T) {
+	svc, gameDir, _ := newTestService(t)
+	setupCharDir(t, gameDir, "FFXIV_CHR001", map[string][]byte{
+		"COMMON.DAT": []byte("original"),
+	})
+
+	// バックアップ作成
+	svc.CreateBackup("Backup1", "", []string{"FFXIV_CHR001"}, false)
+	list, _ := svc.GetBackupList("FFXIV_CHR001")
+	backupID := list[0].BackupID
+
+	// ゲームデータを書き換え
+	os.WriteFile(filepath.Join(gameDir, "FFXIV_CHR001", "COMMON.DAT"), []byte("modified"), 0644)
+
+	// リストア実行
+	err := svc.RestoreBackup(backupID, "FFXIV_CHR001", []string{"COMMON.DAT"}, false)
+	if err != nil {
+		t.Fatalf("RestoreBackup error: %v", err)
+	}
+
+	data, _ := os.ReadFile(filepath.Join(gameDir, "FFXIV_CHR001", "COMMON.DAT"))
+	if string(data) != "original" {
+		t.Errorf("expected original content, got %q", data)
+	}
+}
+
+func TestRestoreBackup_InvalidID(t *testing.T) {
+	svc, _, _ := newTestService(t)
+	err := svc.RestoreBackup("nonexistent_id", "FFXIV_CHR001", []string{"COMMON.DAT"}, false)
+	if err == nil {
+		t.Error("expected error for invalid backup ID")
+	}
+}
+
 func TestGetBackupList_AccountSentinel(t *testing.T) {
 	svc, gameDir, _ := newTestService(t)
 	os.WriteFile(filepath.Join(gameDir, "MACROSYS.DAT"), []byte("m"), 0644)
