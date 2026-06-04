@@ -1,28 +1,48 @@
-import {useState} from 'react';
-import logo from './assets/images/logo-universal.png';
-import './App.css';
-import {Greet} from "../wailsjs/go/main/App";
+// frontend/src/App.tsx
+import { useEffect, useState } from 'react'
+import { useAppStore } from './store/useAppStore'
+import { SetupModal } from './components/SetupModal'
+import { Header } from './components/Header'
+import { CharacterPane } from './components/CharacterPane'
+import { BackupPane } from './components/BackupPane'
+import { RestorePane } from './components/RestorePane'
+import { CreateBackupModal } from './components/CreateBackupModal'
+import { Toast } from './components/Toast'
 
-function App() {
-    const [resultText, setResultText] = useState("Please enter your name below 👇");
-    const [name, setName] = useState('');
-    const updateName = (e: any) => setName(e.target.value);
-    const updateResultText = (result: string) => setResultText(result);
+export default function App() {
+  const nasPath = useAppStore((s) => s.nasPath)
+  const initApp = useAppStore((s) => s.initApp)
+  const checkGameProcess = useAppStore((s) => s.checkGameProcess)
+  const [showSetup, setShowSetup] = useState(false)
+  const [showCreateBackup, setShowCreateBackup] = useState(false)
 
-    function greet() {
-        Greet(name).then(updateResultText);
-    }
+  useEffect(() => {
+    initApp().then(() => {
+      const { nasPath } = useAppStore.getState()
+      if (!nasPath) setShowSetup(true)
+    })
+    checkGameProcess()
+  }, [initApp, checkGameProcess])
 
-    return (
-        <div id="App">
-            <img src={logo} id="logo" alt="logo"/>
-            <div id="result" className="result">{resultText}</div>
-            <div id="input" className="input-box">
-                <input id="name" className="input" onChange={updateName} autoComplete="off" name="input" type="text"/>
-                <button className="btn" onClick={greet}>Greet</button>
-            </div>
-        </div>
-    )
+  const handleSetupComplete = async () => {
+    setShowSetup(false)
+    await initApp()
+  }
+
+  return (
+    <div className="bg-gray-900 text-gray-200 h-screen w-screen overflow-hidden flex flex-col font-sans">
+      {showSetup && <SetupModal onComplete={handleSetupComplete} />}
+      {showCreateBackup && <CreateBackupModal onClose={() => setShowCreateBackup(false)} />}
+
+      <Header onSettingsClick={() => setShowSetup(true)} />
+
+      <main className="flex-1 flex overflow-hidden">
+        <CharacterPane onCreateBackup={() => setShowCreateBackup(true)} />
+        <BackupPane />
+        <RestorePane />
+      </main>
+
+      <Toast />
+    </div>
+  )
 }
-
-export default App
