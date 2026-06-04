@@ -377,4 +377,5 @@ $RECYCLE.BIN/
 
 # Frontend dependencies
 frontend/node_modules/
-frontend/dist/
+frontend/dist/*
+!frontend/dist/.gitkeep
