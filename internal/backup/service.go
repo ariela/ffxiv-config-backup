@@ -72,3 +72,58 @@ func (s *Service) CreateBackup(name, memo string, charIDs []string, includeCommo
 	}
 	return os.WriteFile(filepath.Join(dstDir, "meta.json"), data, 0644)
 }
+
+func (s *Service) GetBackupList(charID string) ([]BackupMeta, error) {
+	entries, err := os.ReadDir(s.backupsDir)
+	if errors.Is(err, os.ErrNotExist) {
+		return []BackupMeta{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	var result []BackupMeta
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		metaPath := filepath.Join(s.backupsDir, e.Name(), "meta.json")
+		data, err := os.ReadFile(metaPath)
+		if err != nil {
+			continue // 破損したバックアップはスキップ
+		}
+		var meta BackupMeta
+		if err := json.Unmarshal(data, &meta); err != nil {
+			continue
+		}
+		if charID == "ACCOUNT" {
+			if meta.ContainsCommonMacro {
+				result = append(result, meta)
+			}
+		} else {
+			if containsString(meta.Characters, charID) {
+				result = append(result, meta)
+			}
+		}
+	}
+
+	sortByCreatedAtDesc(result)
+	return result, nil
+}
+
+func containsString(slice []string, s string) bool {
+	for _, v := range slice {
+		if v == s {
+			return true
+		}
+	}
+	return false
+}
+
+func sortByCreatedAtDesc(metas []BackupMeta) {
+	for i := 1; i < len(metas); i++ {
+		for j := i; j > 0 && metas[j].CreatedAt.After(metas[j-1].CreatedAt); j-- {
+			metas[j], metas[j-1] = metas[j-1], metas[j]
+		}
+	}
+}

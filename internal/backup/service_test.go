@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 func newTestService(t *testing.T) (*Service, string, string) {
@@ -83,5 +84,47 @@ func TestCreateBackup_NoFilesFound_Error(t *testing.T) {
 	err := svc.CreateBackup("Empty", "", []string{"FFXIV_CHR001"}, false)
 	if err == nil {
 		t.Error("expected error when no files are copied")
+	}
+}
+
+func TestGetBackupList_ByCharID(t *testing.T) {
+	svc, gameDir, _ := newTestService(t)
+	setupCharDir(t, gameDir, "FFXIV_CHR001", map[string][]byte{"COMMON.DAT": []byte("a")})
+	setupCharDir(t, gameDir, "FFXIV_CHR002", map[string][]byte{"COMMON.DAT": []byte("b")})
+
+	svc.CreateBackup("BackupA", "", []string{"FFXIV_CHR001"}, false)
+	time.Sleep(time.Millisecond * 10)
+	svc.CreateBackup("BackupB", "", []string{"FFXIV_CHR001", "FFXIV_CHR002"}, false)
+
+	list, err := svc.GetBackupList("FFXIV_CHR001")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 2 {
+		t.Errorf("expected 2 backups for CHR001, got %d", len(list))
+	}
+	// 降順確認（新しい方が先）
+	if list[0].CreatedAt.Before(list[1].CreatedAt) {
+		t.Error("expected descending order")
+	}
+}
+
+func TestGetBackupList_AccountSentinel(t *testing.T) {
+	svc, gameDir, _ := newTestService(t)
+	os.WriteFile(filepath.Join(gameDir, "MACROSYS.DAT"), []byte("m"), 0644)
+	setupCharDir(t, gameDir, "FFXIV_CHR001", map[string][]byte{"COMMON.DAT": []byte("c")})
+
+	svc.CreateBackup("WithCommon", "", []string{"FFXIV_CHR001"}, true)
+	svc.CreateBackup("CharOnly", "", []string{"FFXIV_CHR001"}, false)
+
+	list, err := svc.GetBackupList("ACCOUNT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(list) != 1 {
+		t.Errorf("expected 1 backup with common macro, got %d", len(list))
+	}
+	if list[0].Name != "WithCommon" {
+		t.Errorf("unexpected backup: %q", list[0].Name)
 	}
 }
