@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FF14 - NAS Backup/Restore</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* カスタムスクロールバー等、UIの質感を高める微調整 */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #1f2937; }
+        ::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+        body { user-select: none; }
+    </style>
+</head>
+<body class="bg-gray-900 text-gray-200 h-screen w-screen overflow-hidden flex flex-col font-sans relative">
+
+<!-- Initial Setup Modal (ローカル設定未済の場合に表示。非表示にする場合は 'hidden' クラスを追加) -->
+<!-- ※モックアップ確認用に表示状態(hiddenなし)にしていますが、通常はJSで制御します -->
+<div id="initial-setup-modal" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center hidden">
+    <div class="bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-[550px] overflow-hidden flex flex-col">
+        <div class="p-4 border-b border-gray-800 bg-gray-950 shrink-0">
+            <h2 class="text-lg font-bold text-gray-100 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                初期セットアップ: バックアップ先の指定
+            </h2>
+        </div>
+        <div class="p-6 space-y-5">
+            <p class="text-sm text-gray-300 leading-relaxed">
+                共有設定およびバックアップデータが保存されるNAS、または共有ディレクトリのパスを指定してください。<br>
+                <span class="text-xs text-gray-500">※初回起動時、またはローカル設定ファイルが未検出の場合に表示されます。</span>
+            </p>
+            <div>
+                <label class="block text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">共有ディレクトリパス (UNCパス または ローカルパス)</label>
+                <input type="text" placeholder="\\NAS\Shared\FF14_Backups" class="w-full bg-gray-950 border border-gray-700 rounded p-3 text-gray-200 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none font-mono shadow-inner" value="\\NAS\Shared\FF14_Backups">
+            </div>
+
+            <!-- 接続テスト結果 (UIステータス表示用) -->
+            <div class="p-3 bg-green-900/20 border border-green-800/50 rounded flex items-start">
+                <svg class="w-5 h-5 text-green-500 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                <div class="text-xs text-green-400 font-medium mt-0.5">接続テスト成功: ディレクトリへの書き込み権限を確認しました。</div>
+            </div>
+        </div>
+        <div class="p-4 border-t border-gray-800 bg-gray-950 flex justify-end space-x-3 shrink-0">
+            <button class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 text-sm font-medium transition" onclick="document.getElementById('initial-setup-modal').classList.add('hidden')">キャンセル</button>
+            <button class="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] transition flex items-center" onclick="document.getElementById('initial-setup-modal').classList.add('hidden')">
+                設定を保存
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Header -->
+<header class="bg-gray-950 border-b border-gray-800 px-6 py-3 flex justify-between items-center shrink-0">
+    <div class="flex items-center space-x-3">
+        <div class="w-3 h-3 bg-blue-500 rounded-full shadow-[0_0_8px_rgba(59,130,246,0.8)]"></div>
+        <h1 class="text-lg font-bold tracking-wider text-gray-100">FFXIV Backup Configurator</h1>
+    </div>
+    <div class="flex items-center space-x-4 text-sm">
+            <span class="text-green-400 flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                NAS Connected (\\NAS\FF14_Backups)
+            </span>
+        <button class="bg-gray-800 hover:bg-gray-700 text-gray-300 px-4 py-1.5 rounded text-sm transition" onclick="document.getElementById('initial-setup-modal').classList.remove('hidden')">設定</button>
+    </div>
+</header>
+
+<!-- Main Content (3-Pane Layout) -->
+<main class="flex-1 flex overflow-hidden">
+
+    <!-- Left Pane: Character Selection -->
+    <section class="w-1/4 bg-gray-900 border-r border-gray-800 flex flex-col">
+        <div class="p-4 border-b border-gray-800 shrink-0">
+            <h2 class="text-xs uppercase font-bold text-gray-500 tracking-widest">1. 対象キャラクター選択</h2>
+        </div>
+        <div class="overflow-y-auto flex-1 p-2 space-y-1">
+            <!-- Account Common -->
+            <div class="p-3 rounded bg-gray-800/50 hover:bg-gray-800 cursor-pointer flex items-center justify-between group transition">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    <span class="text-sm font-medium">アカウント共通設定</span>
+                </div>
+            </div>
+
+            <!-- Character Item (Selected) -->
+            <div class="p-3 rounded bg-blue-900/40 border border-blue-700/50 cursor-pointer flex items-center justify-between group">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded bg-blue-800 text-blue-200 flex items-center justify-center font-bold text-xs mr-3">AL</div>
+                    <div>
+                        <div class="text-sm font-bold text-blue-300">Alice Liddell</div>
+                        <div class="text-xs text-gray-500 font-mono">CHR0049281A...</div>
+                    </div>
+                </div>
+                <button class="text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition" title="名前を編集">✎</button>
+            </div>
+
+            <!-- Character Item -->
+            <div class="p-3 rounded bg-gray-800/50 hover:bg-gray-800 cursor-pointer flex items-center justify-between group transition">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded bg-gray-700 text-gray-300 flex items-center justify-center font-bold text-xs mr-3">BO</div>
+                    <div>
+                        <div class="text-sm font-medium">Bob Builder</div>
+                        <div class="text-xs text-gray-500 font-mono">CHR0089123B...</div>
+                    </div>
+                </div>
+                <button class="text-gray-500 hover:text-gray-300 opacity-0 group-hover:opacity-100 transition" title="名前を編集">✎</button>
+            </div>
+
+            <!-- Character Item (Unknown) -->
+            <div class="p-3 rounded bg-gray-800/50 hover:bg-gray-800 cursor-pointer flex items-center justify-between group transition">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 rounded border border-dashed border-gray-600 text-gray-500 flex items-center justify-center font-bold text-xs mr-3">?</div>
+                    <div>
+                        <div class="text-sm font-medium text-gray-400 italic">未登録キャラクター</div>
+                        <div class="text-xs text-gray-500 font-mono">CHR0099999Z...</div>
+                    </div>
+                </div>
+                <button class="text-blue-400 text-xs hover:text-blue-300 transition" title="名前を登録">登録</button>
+            </div>
+        </div>
+
+        <div class="p-4 border-t border-gray-800 shrink-0">
+            <button class="w-full bg-blue-600 hover:bg-blue-500 text-white py-2 rounded text-sm font-bold transition shadow-lg flex items-center justify-center">
+                <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                新規バックアップ作成
+            </button>
+        </div>
+    </section>
+
+    <!-- Middle Pane: Backup History -->
+    <section class="w-1/3 bg-gray-900 border-r border-gray-800 flex flex-col">
+        <div class="p-4 border-b border-gray-800 shrink-0 flex justify-between items-end">
+            <h2 class="text-xs uppercase font-bold text-gray-500 tracking-widest">2. 復元元バックアップ選択</h2>
+            <span class="text-xs text-blue-400">Alice Liddell</span>
+        </div>
+        <div class="overflow-y-auto flex-1 p-2 space-y-2">
+
+            <!-- Backup Item (Selected) -->
+            <div class="p-3 rounded bg-blue-900/30 border-l-4 border-blue-500 cursor-pointer">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="text-sm font-bold text-gray-200">パッチ7.0直前 安定版</div>
+                    <div class="text-xs text-gray-400 font-mono">2026/06/04 12:00</div>
+                </div>
+                <p class="text-xs text-gray-400 line-clamp-2">HUDとXHBの大幅変更を行う前の状態。マクロ等も最新化済み。</p>
+            </div>
+
+            <!-- Backup Item -->
+            <div class="p-3 rounded bg-gray-800/40 hover:bg-gray-800 border-l-4 border-transparent cursor-pointer transition">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="text-sm font-medium text-gray-300">新ジョブホットバー調整後</div>
+                    <div class="text-xs text-gray-500 font-mono">2026/05/15 22:30</div>
+                </div>
+                <p class="text-xs text-gray-500 line-clamp-2">ピクトマンサー用の配置を完了。</p>
+            </div>
+
+            <!-- Backup Item -->
+            <div class="p-3 rounded bg-gray-800/40 hover:bg-gray-800 border-l-4 border-transparent cursor-pointer transition">
+                <div class="flex justify-between items-start mb-1">
+                    <div class="text-sm font-medium text-gray-300">自動バックアップ</div>
+                    <div class="text-xs text-gray-500 font-mono">2026/05/01 04:00</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Right Pane: File Selection & Restore (Logical Name Focus) -->
+    <section class="flex-1 bg-gray-900 flex flex-col relative">
+        <div class="p-4 border-b border-gray-800 shrink-0 flex justify-between items-center">
+            <h2 class="text-xs uppercase font-bold text-gray-500 tracking-widest">3. リストア対象項目選択</h2>
+            <label class="flex items-center space-x-2 text-sm cursor-pointer">
+                <input type="checkbox" class="rounded bg-gray-800 border-gray-600 text-blue-500 focus:ring-blue-500 focus:ring-offset-gray-900" checked>
+                <span class="text-gray-400 hover:text-gray-200">すべて選択</span>
+            </label>
+        </div>
+
+        <div class="overflow-y-auto flex-1 p-4 grid grid-cols-2 gap-3 content-start pb-24">
+            <!-- 共通マクロが存在する場合の特記事項 -->
+            <div class="col-span-2 bg-yellow-900/20 border border-yellow-700/50 p-3 rounded mb-2 flex items-start">
+                <svg class="w-5 h-5 text-yellow-500 mr-2 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <div class="text-xs text-yellow-200/80">このバックアップには「アカウント共通マクロ」が含まれています。リストアすると他キャラクターにも影響を与えます。</div>
+            </div>
+
+            <!-- Logical Name Focus Items -->
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500" checked>
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">HUDレイアウト</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">COMMON.DAT</div>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500" checked>
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">ホットバー / XHB</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">HOTBAR.DAT</div>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500" checked>
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">キャラクター固有マクロ</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">MACRO.DAT</div>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500" checked>
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">キャラクターコンフィグ全般</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">ADDON.DAT</div>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition opacity-50">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">チャットログフィルター</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">LOGFLTR.DAT</div>
+                </div>
+            </label>
+
+            <label class="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition opacity-50">
+                <input type="checkbox" class="rounded bg-gray-900 border-gray-600 text-blue-500 focus:ring-blue-500">
+                <div class="ml-3">
+                    <div class="text-sm font-bold text-gray-100">ポートレート等のUI設定</div>
+                    <div class="text-xs text-gray-500 font-mono mt-0.5">UISAVE.DAT</div>
+                </div>
+            </label>
+        </div>
+
+        <!-- Restore Action Area (Sticky Bottom) -->
+        <div class="absolute bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800 p-4 flex justify-between items-center shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            <div class="flex items-center text-sm">
+                <span class="w-3 h-3 bg-red-500 rounded-full mr-2 shadow-[0_0_5px_rgba(239,68,68,1)] animate-pulse hidden" id="process-warning-dot"></span>
+                <span class="text-red-400 font-bold hidden" id="process-warning-text">FF14クライアントが起動中のため復元できません</span>
+
+                <span class="w-3 h-3 bg-green-500 rounded-full mr-2 shadow-[0_0_5px_rgba(34,197,94,1)]" id="process-ok-dot"></span>
+                <span class="text-gray-400" id="process-ok-text">安全に復元可能です</span>
+            </div>
+            <div class="flex space-x-3">
+                <button class="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded text-gray-300 text-sm font-medium transition">キャンセル</button>
+                <button class="px-8 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-bold shadow-[0_0_15px_rgba(37,99,235,0.4)] transition">
+                    選択項目を復元
+                </button>
+            </div>
+        </div>
+    </section>
+
+</main>
+</body>
+</html>
