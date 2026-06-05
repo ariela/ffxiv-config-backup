@@ -370,3 +370,14 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/windows,linux,macos,visualstudiocode,intellij,intellij+all,intellij+iml,git,go,dotenv,direnv
 
 .superpowers/
+
+# Wails build output
+/ffxiv-config-backup
+/build/bin/
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/*
+!frontend/dist/.gitkeep
+build/bin/*.exe
+frontend/package.json.md5
