@@ -379,3 +379,5 @@ $RECYCLE.BIN/
 frontend/node_modules/
 frontend/dist/*
 !frontend/dist/.gitkeep
+build/bin/*.exe
+frontend/package.json.md5
