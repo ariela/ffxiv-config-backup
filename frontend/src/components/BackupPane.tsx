@@ -20,21 +20,21 @@ export function BackupPane() {
 
   if (!selectedCharId) {
     return (
-      <section className="w-1/3 bg-gray-900 border-r border-gray-800 flex items-center justify-center">
-        <p className="text-gray-600 text-sm">キャラクターを選択してください</p>
+      <section className="w-1/3 bg-umbra border-r border-arcanum flex items-center justify-center animate-fade-up [animation-delay:120ms]">
+        <p className="text-faint text-sm">キャラクターを選択してください</p>
       </section>
     )
   }
 
   return (
-    <section className="w-1/3 bg-gray-900 border-r border-gray-800 flex flex-col">
-      <div className="p-4 border-b border-gray-800 shrink-0 flex justify-between items-end">
-        <h2 className="text-xs uppercase font-bold text-gray-500 tracking-widest">2. 復元元バックアップ選択</h2>
-        <span className="text-xs text-blue-400">{selectedChar?.displayName}</span>
+    <section className="w-1/3 bg-umbra border-r border-arcanum flex flex-col animate-fade-up [animation-delay:120ms]">
+      <div className="p-4 border-b border-arcanum shrink-0 flex justify-between items-end">
+        <h2 className="text-xs font-display uppercase font-bold text-faint tracking-widest">2. 復元元バックアップ選択</h2>
+        <span className="text-xs text-crystal/80">{selectedChar?.displayName}</span>
       </div>
       <div className="overflow-y-auto flex-1 p-2 space-y-2">
         {backups.length === 0 && (
-          <p className="text-gray-600 text-sm p-3">バックアップがありません</p>
+          <p className="text-faint text-sm p-3">バックアップがありません</p>
         )}
         {backups.map((backup) => {
           const isSelected = backup.backup_id === selectedBackupId
@@ -48,18 +48,18 @@ export function BackupPane() {
               onClick={() => handleSelect(backup.backup_id)}
               className={`p-3 rounded cursor-pointer transition ${
                 isSelected
-                  ? 'bg-blue-900/30 border-l-4 border-blue-500'
-                  : 'bg-gray-800/40 hover:bg-gray-800 border-l-4 border-transparent'
+                  ? 'bg-aether border-l-4 border-gold'
+                  : 'bg-aether/30 hover:bg-aether/60 border-l-4 border-transparent'
               }`}
             >
               <div className="flex justify-between items-start mb-1">
-                <div className={`text-sm font-medium ${isSelected ? 'text-gray-100 font-bold' : 'text-gray-300'}`}>
+                <div className={`text-sm font-medium ${isSelected ? 'text-gold-bright font-bold' : 'text-parchment'}`}>
                   {backup.name}
                 </div>
-                <div className="text-xs text-gray-500 font-mono ml-2 shrink-0">{date}</div>
+                <div className="text-xs text-faint font-mono ml-2 shrink-0">{date}</div>
               </div>
               {backup.memo && (
-                <p className="text-xs text-gray-500 line-clamp-2">{backup.memo}</p>
+                <p className="text-xs text-mist/70 line-clamp-2">{backup.memo}</p>
               )}
             </div>
           )

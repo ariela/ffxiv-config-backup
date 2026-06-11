@@ -30,7 +30,7 @@ export default function App() {
   }
 
   return (
-    <div className="bg-gray-900 text-gray-200 h-screen w-screen overflow-hidden flex flex-col font-sans">
+    <div className="bg-abyss text-parchment h-screen w-screen overflow-hidden flex flex-col font-sans">
       {showSetup && <SetupModal onComplete={handleSetupComplete} />}
       {showCreateBackup && <CreateBackupModal onClose={() => setShowCreateBackup(false)} />}
 

@@ -28,71 +28,75 @@ export function RestorePane() {
 
   if (!selectedBackupId) {
     return (
-      <section className="flex-1 bg-gray-900 flex items-center justify-center">
-        <p className="text-gray-600 text-sm">バックアップを選択してください</p>
+      <section className="flex-1 bg-umbra flex items-center justify-center animate-fade-up [animation-delay:240ms]">
+        <p className="text-faint text-sm">バックアップを選択してください</p>
       </section>
     )
   }
 
   return (
-    <section className="flex-1 bg-gray-900 flex flex-col relative">
-      <div className="p-4 border-b border-gray-800 shrink-0 flex justify-between items-center">
-        <h2 className="text-xs uppercase font-bold text-gray-500 tracking-widest">3. リストア対象項目選択</h2>
+    <section className="flex-1 bg-umbra flex flex-col relative animate-fade-up [animation-delay:240ms]">
+      <div className="p-4 border-b border-arcanum shrink-0 flex justify-between items-center">
+        <h2 className="text-xs font-display uppercase font-bold text-faint tracking-widest">3. リストア対象項目選択</h2>
         <label className="flex items-center space-x-2 text-sm cursor-pointer">
           <input
             type="checkbox"
             checked={allSelected}
             onChange={() => toggleAllFiles(filenames)}
-            className="rounded bg-gray-800 border-gray-600 text-blue-500"
+            className="rounded bg-umbra border-arcanum text-gold focus:ring-gold/30"
           />
-          <span className="text-gray-400 hover:text-gray-200">すべて選択</span>
+          <span className="text-mist hover:text-parchment transition">すべて選択</span>
         </label>
       </div>
 
       <div className="overflow-y-auto flex-1 p-4 grid grid-cols-2 gap-3 content-start pb-24">
         {selectedBackup?.contains_common_macro && !isAccount && (
-          <div className="col-span-2 bg-yellow-900/20 border border-yellow-700/50 p-3 rounded flex items-start">
-            <span className="text-yellow-500 mr-2">ℹ</span>
-            <p className="text-xs text-yellow-200/80">このバックアップには「アカウント共通マクロ」が含まれています。</p>
+          <div className="col-span-2 bg-amber/10 border border-amber/40 p-3 rounded flex items-start">
+            <span className="text-amber mr-2">ℹ</span>
+            <p className="text-xs text-amber/80">このバックアップには「アカウント共通マクロ」が含まれています。</p>
           </div>
         )}
         {fileEntries.map((entry) => (
           <label
             key={entry.filename}
-            className="flex items-center p-3 border border-gray-700 rounded bg-gray-800 hover:bg-gray-700 cursor-pointer transition"
+            className={`flex items-center p-3 border rounded cursor-pointer transition ${
+              selectedFiles.has(entry.filename)
+                ? 'bg-crystal/10 border-crystal/40'
+                : 'bg-aether/40 border-arcanum hover:bg-aether hover:border-arcanum/80'
+            }`}
           >
             <input
               type="checkbox"
               checked={selectedFiles.has(entry.filename)}
               onChange={() => toggleFile(entry.filename)}
-              className="rounded bg-gray-900 border-gray-600 text-blue-500"
+              className="rounded bg-umbra border-arcanum text-crystal focus:ring-crystal/30"
             />
             <div className="ml-3">
-              <div className="text-sm font-bold text-gray-100">{entry.logicalName}</div>
-              <div className="text-xs text-gray-500 font-mono mt-0.5">{entry.filename}</div>
+              <div className="text-sm font-bold text-parchment">{entry.logicalName}</div>
+              <div className="text-xs text-faint font-mono mt-0.5">{entry.filename}</div>
             </div>
           </label>
         ))}
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 bg-gray-900/90 backdrop-blur-sm border-t border-gray-800 p-4 flex justify-between items-center">
+      <div className="absolute bottom-0 left-0 right-0 bg-abyss/90 backdrop-blur-sm border-t border-arcanum p-4 flex justify-between items-center shadow-[0_-10px_30px_rgba(7,10,20,0.8)]">
         <div className="flex items-center text-sm">
           {isGameRunning ? (
             <>
-              <span className="w-3 h-3 bg-red-500 rounded-full mr-2 animate-pulse" />
-              <span className="text-red-400 font-bold">FF14クライアントが起動中のため復元できません</span>
+              <span className="w-3 h-3 bg-garnet rounded-full mr-2 animate-pulse-garnet" />
+              <span className="text-garnet font-bold">FF14クライアントが起動中のため復元できません</span>
             </>
           ) : (
             <>
-              <span className="w-3 h-3 bg-green-500 rounded-full mr-2" />
-              <span className="text-gray-400">安全に復元可能です</span>
+              <span className="w-3 h-3 bg-jade rounded-full mr-2 shadow-glow-jade" />
+              <span className="text-mist">安全に復元可能です</span>
             </>
           )}
         </div>
         <button
           onClick={handleRestore}
           disabled={isGameRunning || isLoading || selectedFiles.size === 0}
-          className="px-8 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white rounded font-bold transition"
+          className="px-8 py-2 bg-gold hover:bg-gold-bright disabled:opacity-40 disabled:cursor-not-allowed text-abyss rounded font-bold font-display uppercase tracking-wider transition shadow-glow-gold"
         >
           {isLoading ? '処理中...' : '選択項目を復元'}
         </button>
