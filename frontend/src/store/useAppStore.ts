@@ -83,7 +83,7 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
     set({ selectedCharId: id, selectedBackupId: null, selectedFiles: new Set(), backups: [] })
     try {
       const backups = await goGetBackupList(id)
-      set({ backups })
+      set({ backups: backups ?? [] })
     } catch (e: unknown) {
       set({ error: String(e) })
     }

@@ -105,7 +105,7 @@ func (s *Service) GetBackupList(charID string) ([]BackupMeta, error) {
 		return nil, err
 	}
 
-	var result []BackupMeta
+	result := make([]BackupMeta, 0)
 	for _, e := range entries {
 		if !e.IsDir() {
 			continue
